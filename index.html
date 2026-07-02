@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poupa AI — Controle Financeiro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14;
+    --panel:#12181F;
+    --panel-2:#161D25;
+    --line:#232C36;
+    --ink:#E8E6DF;
+    --muted:#8B93A0;
+    --gold:#12B981;
+    --gold-dim:#0D8A62;
+    --violet:#8B5CF6;
+    --violet-dim:#6D28D9;
+    --green:#3FCB86;
+    --red:#E4604A;
+    --radius:10px;
+  }
+  html[data-theme="light"]{
+    --bg:#F6F8F6;
+    --panel:#FFFFFF;
+    --panel-2:#F0F3EF;
+    --line:#DFE4DD;
+    --ink:#161C18;
+    --muted:#68706B;
+    --gold:#0E9A6A;
+    --gold-dim:#0B7A54;
+    --violet:#7C3AED;
+    --violet-dim:#6025C4;
+    --green:#0E9A6A;
+    --red:#C93F2A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{transition:background .2s ease;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+    transition:background .2s ease, color .2s ease;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  /* ---- Ticker header ---- */
+  .ticker-wrap{
+    background:var(--panel-2);
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    white-space:nowrap;
+    padding:8px 0;
+  }
+  .ticker{
+    display:inline-block;
+    padding-left:100%;
+    animation:scroll 28s linear infinite;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    color:var(--muted);
+    letter-spacing:0.02em;
+  }
+  .ticker span{margin-right:48px;}
+  .ticker b{color:var(--gold);}
+  @keyframes scroll{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-100%);}
+  }
+
+  header.top{
+    max-width:1100px;
+    margin:0 auto;
+    padding:32px 24px 0;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+  }
+  .brand-logo{
+    display:flex;
+    align-items:baseline;
+    gap:2px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:30px;
+    font-weight:800;
+    letter-spacing:-0.01em;
+    line-height:1;
+  }
+  .brand-logo .poupa{color:var(--gold);}
+  .brand-logo .ai-wrap{position:relative; color:var(--violet); display:inline-flex; align-items:baseline;}
+  .brand-logo .spark{
+    position:absolute;
+    top:-16px;
+    right:-4px;
+    width:14px;
+    height:14px;
+    color:var(--violet);
+  }
+  header.top .sub{
+    color:var(--muted);
+    font-size:13.5px;
+    margin-top:6px;
+  }
+  .header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--muted);
+    border-radius:8px;
+    width:36px;
+    height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    font-size:15px;
+    transition:all .15s;
+  }
+  .icon-btn:hover{color:var(--ink); border-color:var(--muted);}
+  .user-chip{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:5px 6px 5px 12px;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .user-chip b{color:var(--ink); font-weight:600;}
+  .user-chip button{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    border-radius:14px;
+    padding:5px 10px;
+    font-size:11px;
+    cursor:pointer;
+  }
+  .user-chip button:hover{color:var(--ink);}
+
+  nav.tabs{
+    max-width:1100px;
+    margin:24px auto 0;
+    padding:0 24px;
+    display:flex;
+    gap:4px;
+    border-bottom:1px solid var(--line);
+  }
+  nav.tabs button{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:14px;
+    font-weight:600;
+    padding:12px 18px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:all .15s ease;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{color:var(--gold); border-bottom-color:var(--gold);}
+
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:28px 24px 0;
+  }
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---- Cards ---- */
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+    margin-bottom:24px;
+  }
+  @media(max-width:800px){ .cards{grid-template-columns:repeat(2,1fr);} }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+  .card .label{
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .card .value{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:22px;
+    font-weight:600;
+  }
+  .card .value.pos{color:var(--green);}
+  .card .value.neg{color:var(--red);}
+  .card .value.gold{color:var(--gold);}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .panel h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .panel h2 .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--gold-dim);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+  }
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:20px;
+  }
+  @media(max-width:800px){ .grid2{grid-template-columns:1fr;} }
+
+  /* ---- Category ledger bars ---- */
+  .cat-row{
+    display:grid;
+    grid-template-columns:110px 1fr 90px;
+    align-items:center;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  .cat-row:last-child{border-bottom:none;}
+  .cat-name{color:var(--ink);}
+  .cat-bar-track{
+    background:var(--panel-2);
+    border-radius:4px;
+    height:8px;
+    overflow:hidden;
+  }
+  .cat-bar-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius:4px;
+  }
+  .cat-val{
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+    color:var(--muted);
+    font-size:12.5px;
+  }
+
+  select, input, button.btn{
+    font-family:'Inter',sans-serif;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    border-radius:7px;
+    padding:9px 11px;
+    font-size:13.5px;
+  }
+  select:focus, input:focus{outline:1px solid var(--gold); border-color:var(--gold);}
+
+  /* ---- Form ---- */
+  #txForm{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:12px;
+    margin-bottom:8px;
+  }
+  #txForm label{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    display:block;
+    margin-bottom:5px;
+  }
+  #txForm .field{display:flex; flex-direction:column;}
+  #txForm .full{grid-column:1/-1;}
+  @media(max-width:700px){ #txForm{grid-template-columns:1fr 1fr;} }
+
+  .btn-gold{
+    background:var(--gold);
+    color:#14100A;
+    font-weight:600;
+    border:none;
+    cursor:pointer;
+    transition:filter .15s;
+  }
+  .btn-gold:hover{filter:brightness(1.08);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--muted);
+    border:1px solid var(--line);
+    cursor:pointer;
+  }
+  .btn-ghost:hover{color:var(--ink); border-color:var(--muted);}
+
+  /* ---- Table ---- */
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left;
+    color:var(--muted);
+    font-weight:500;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    padding:8px 6px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:10px 6px;
+    border-bottom:1px solid var(--line);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+  }
+  tbody td.desc{font-family:'Inter',sans-serif; font-size:13px;}
+  tbody tr:hover{background:var(--panel-2);}
+  .tag{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:20px;
+    font-size:10.5px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+  }
+  .tag.entrada{background:rgba(76,154,106,.15); color:var(--green);}
+  .tag.saida{background:rgba(193,84,60,.15); color:var(--red);}
+  .tag.investimento{background:rgba(201,162,39,.15); color:var(--gold);}
+  .del-btn{
+    background:none; border:none; color:var(--muted); cursor:pointer; font-size:15px;
+  }
+  .del-btn:hover{color:var(--red);}
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:40px 0;
+  }
+
+  .progress-wrap{margin-top:6px;}
+  .progress-track{
+    background:var(--panel-2);
+    border-radius:6px;
+    height:14px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg, var(--gold-dim), var(--gold));
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    transition:width .4s ease;
+  }
+  .progress-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:6px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  #saveIndicator{
+    position:fixed;
+    bottom:18px;
+    right:18px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-size:11.5px;
+    font-family:'IBM Plex Mono',monospace;
+    padding:8px 14px;
+    border-radius:20px;
+    opacity:0;
+    transition:opacity .3s;
+  }
+  #saveIndicator.show{opacity:1;}
+
+  .month-select{margin-left:auto;}
+  .row-actions{display:flex; gap:8px; align-items:center;}
+
+  /* ---- Metas ---- */
+  .meta-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:14px;
+  }
+  .meta-card .meta-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:10px;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .meta-card .meta-name{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:16px;
+  }
+  .meta-card .meta-meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+  .meta-card .meta-actions{display:flex; gap:10px; align-items:center;}
+  .meta-badge{
+    font-size:10px;
+    font-family:'IBM Plex Mono',monospace;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:var(--gold-dim);
+    border:1px solid var(--gold-dim);
+    padding:2px 8px;
+    border-radius:20px;
+  }
+  .manual-update{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin-top:10px;
+  }
+  .manual-update input{width:130px;}
+  .empty-cat{color:var(--muted); font-size:12.5px;}
+  .cat-manage-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:7px 0;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  .cat-manage-row:last-child{border-bottom:none;}
+  .cat-manage-row .tipo-tag{
+    font-size:10px;
+    color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;
+    margin-left:8px;
+  }
+
+  /* ---- Auth screen ---- */
+  #authScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .auth-box{
+    width:100%;
+    max-width:380px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:32px 28px;
+  }
+  .auth-box .brand-logo{
+    font-size:32px;
+    margin-bottom:6px;
+    justify-content:center;
+  }
+  .auth-sub{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:26px;
+  }
+  .auth-tabs{
+    display:flex;
+    background:var(--panel-2);
+    border-radius:9px;
+    padding:4px;
+    margin-bottom:22px;
+  }
+  .auth-tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    padding:9px;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:13px;
+    font-weight:600;
+    color:var(--muted);
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .auth-tabs button.active{background:var(--panel); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.15);}
+  .auth-form{display:none; flex-direction:column; gap:14px;}
+  .auth-form.active{display:flex;}
+  .auth-form .field label{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    display:block;
+    margin-bottom:5px;
+  }
+  .auth-form input{width:100%;}
+  .auth-form button[type="button"]{
+    margin-top:4px;
+    padding:11px;
+    font-size:14px;
+  }
+  .auth-error{
+    background:rgba(228,96,74,.12);
+    color:var(--red);
+    border:1px solid rgba(228,96,74,.3);
+    border-radius:7px;
+    padding:9px 12px;
+    font-size:12.5px;
+    display:none;
+  }
+  .auth-error.show{display:block;}
+  .auth-note{
+    margin-top:18px;
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+    line-height:1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="authScreen">
+  <div class="auth-box">
+    <div class="brand-logo"><span class="poupa">Poupa</span><span class="ai-wrap">AI<svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z"/></svg></span></div>
+    <div class="auth-sub">Seu controle financeiro pessoal</div>
+
+    <div class="auth-tabs">
+      <button type="button" id="tabLogin" class="active">Entrar</button>
+      <button type="button" id="tabSignup">Criar conta</button>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+
+    <div class="auth-form active" id="loginForm">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="loginUser" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="loginPass" autocomplete="current-password" required>
+      </div>
+      <button type="button" id="loginSubmitBtn" class="btn btn-gold">Entrar</button>
+    </div>
+
+    <div class="auth-form" id="signupForm">
+      <div class="field">
+        <label>Seu nome</label>
+        <input type="text" id="signupNome" required>
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="signupUser" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="signupPass" autocomplete="new-password" required minlength="6">
+      </div>
+      <button type="button" id="signupSubmitBtn" class="btn btn-gold">Criar conta</button>
+    </div>
+
+    <div class="auth-note">Cada conta tem seus próprios lançamentos, metas e categorias, protegidos por autenticação segura (Supabase Auth). Dependendo da configuração do projeto, pode ser necessário confirmar o e-mail antes do primeiro acesso.</div>
+  </div>
+</div>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="appScreen" style="display:none;">
+
+<div class="ticker-wrap">
+  <div class="ticker" id="tickerText">Carregando resumo...</div>
+</div>
+
+<header class="top">
+  <div>
+    <div class="brand-logo"><span class="poupa">Poupa</span><span class="ai-wrap">AI<svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z"/></svg></span></div>
+    <div class="sub">Seu controle financeiro pessoal</div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="themeToggle" title="Alternar tema">🌙</button>
+    <div class="user-chip">
+      <span>Olá, <b id="userChipName">—</b></span>
+      <button id="logoutBtn">Sair</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-view="painel">Painel</button>
+  <button class="tab-btn" data-view="lancamentos">Lançamentos</button>
+  <button class="tab-btn" data-view="investimentos">Investimentos</button>
+  <button class="tab-btn" data-view="metas">Metas</button>
+</nav>
+
+<main>
+
+  <!-- ============ PAINEL ============ -->
+  <section class="view active" id="view-painel">
+
+    <div class="cards">
+      <div class="card">
+        <div class="label">Entradas do mês</div>
+        <div class="value pos mono" id="cardEntradas">R$ 0</div>
+      </div>
+      <div class="card">
+        <div class="label">Saídas do mês</div>
+        <div class="value neg mono" id="cardSaidas">R$ 0</div>
+      </div>
+      <div class="card">
+        <div class="label">Saldo do mês</div>
+        <div class="value mono" id="cardSaldo">R$ 0</div>
+      </div>
+      <div class="card">
+        <div class="label">Total investido</div>
+        <div class="value gold mono" id="cardInvestido">R$ 0</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Onde você mais gastou <span class="eyebrow" id="mesLabelCat"></span></h2>
+        <div id="catList"></div>
+      </div>
+      <div class="panel">
+        <h2>Distribuição de gastos <span class="eyebrow">por categoria</span></h2>
+        <canvas id="pieChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Últimos lançamentos <span class="eyebrow">mais recentes</span></h2>
+      <table>
+        <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th></tr></thead>
+        <tbody id="recentBody"></tbody>
+      </table>
+      <div class="empty" id="recentEmpty" style="display:none;">Nenhum lançamento ainda. Vá em "Lançamentos" para começar.</div>
+    </div>
+
+  </section>
+
+  <!-- ============ LANÇAMENTOS ============ -->
+  <section class="view" id="view-lancamentos">
+
+    <div class="panel">
+      <h2>Novo lançamento</h2>
+      <div id="txForm">
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="fData" required>
+        </div>
+        <div class="field">
+          <label>Tipo</label>
+          <select id="fTipo" required>
+            <option value="saida">Saída</option>
+            <option value="entrada">Entrada</option>
+            <option value="investimento">Investimento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <select id="fCategoria" required></select>
+        </div>
+        <div class="field full">
+          <label>Descrição</label>
+          <input type="text" id="fDescricao" placeholder="Ex: Mercado do mês, cliente Star Gás, aporte Tesouro Selic...">
+        </div>
+        <div class="field">
+          <label>Valor (R$)</label>
+          <input type="number" id="fValor" step="0.01" min="0" placeholder="0,00" required>
+        </div>
+        <div class="field" style="justify-content:flex-end; display:flex; flex-direction:column;">
+          <button type="button" id="txSubmitBtn" class="btn btn-gold">Adicionar lançamento</button>
+        </div>
+      </div>
+      <div style="margin-top:6px;">
+        <button type="button" class="btn btn-ghost" id="toggleCatManager" style="font-size:12px; padding:6px 10px;">+ Gerenciar categorias</button>
+      </div>
+    </div>
+
+    <div class="panel" id="catManagerPanel" style="display:none;">
+      <h2>Categorias personalizadas <span class="eyebrow">criadas por você</span></h2>
+      <div id="catForm" style="display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end;">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="catTipo">
+            <option value="saida">Saída</option>
+            <option value="entrada">Entrada</option>
+            <option value="investimento">Investimento</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nome da nova categoria</label>
+          <input type="text" id="catNome" placeholder="Ex: Equipamento de filmagem">
+        </div>
+        <button type="button" id="catSubmitBtn" class="btn btn-gold" style="height:39px;">Adicionar</button>
+      </div>
+      <div id="catCustomList" style="margin-top:16px;"></div>
+    </div>
+
+
+    <div class="panel">
+      <h2>Histórico
+        <select id="filtroMes" class="month-select"></select>
+      </h2>
+      <table>
+        <thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+        <tbody id="allBody"></tbody>
+      </table>
+      <div class="empty" id="allEmpty" style="display:none;">Nenhum lançamento neste mês.</div>
+    </div>
+
+  </section>
+
+  <!-- ============ INVESTIMENTOS ============ -->
+  <section class="view" id="view-investimentos">
+
+    <div class="grid2">
+      <div class="panel">
+        <h2>Evolução acumulada <span class="eyebrow">investimentos</span></h2>
+        <canvas id="lineChart" height="220"></canvas>
+      </div>
+      <div class="panel">
+        <h2>Por categoria de investimento</h2>
+        <div id="invCatList"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Todos os aportes</h2>
+      <table>
+        <thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+        <tbody id="invBody"></tbody>
+      </table>
+      <div class="empty" id="invEmpty" style="display:none;">Nenhum investimento lançado ainda.</div>
+    </div>
+
+  </section>
+
+  <!-- ============ METAS ============ -->
+  <section class="view" id="view-metas">
+
+    <div class="panel">
+      <h2>Nova meta</h2>
+      <div id="metaForm" style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr auto; gap:12px; align-items:end;">
+        <div class="field">
+          <label>Nome da meta</label>
+          <input type="text" id="mNome" placeholder="Ex: Reserva de emergência, Viagem, CNPJ" required>
+        </div>
+        <div class="field">
+          <label>Valor alvo (R$)</label>
+          <input type="number" id="mValorAlvo" step="0.01" min="0" required>
+        </div>
+        <div class="field">
+          <label>Prazo (opcional)</label>
+          <input type="date" id="mPrazo">
+        </div>
+        <div class="field">
+          <label>Vincular a</label>
+          <select id="mVinculo">
+            <option value="">Controle manual</option>
+          </select>
+        </div>
+        <button type="button" id="metaSubmitBtn" class="btn btn-gold" style="height:39px;">Criar meta</button>
+      </div>
+    </div>
+
+    <div id="metasList"></div>
+
+  </section>
+
+</main>
+
+</div><!-- /#appScreen -->
+
+<div id="saveIndicator">salvo</div>
+
+<script>
+const CATEGORIAS = {
+  saida: ["Aluguel","Mercado","Internet","Celular","Seguro iPhone","Software","Parcela Carro","Parcela iPhone","Transporte","Lazer","Saúde","Outros"],
+  entrada: ["Renda Agência","Freelance","Outros"],
+  investimento: ["Reserva de Emergência","Tesouro/CDB","ETF/Renda Variável","Outros"]
+};
+
+let transacoes = [];
+let config = { metaReserva: 0 };
+let categoriasCustom = { saida: [], entrada: [], investimento: [] };
+let metas = [];
+let pieChart, lineChart;
+let currentUser = null; // objeto do usuário logado no Supabase Auth (tem .id, .email)
+
+const $ = id => document.getElementById(id);
+const fmt = v => "R$ " + (Number(v)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const monthKey = d => d.slice(0,7);
+
+// ==================== SUPABASE ====================
+const SUPABASE_URL = 'https://yhnajpvbconcipxcwuwy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_Eqfzp_O2A-2n-aCw03xBgw_WvkF4pMr';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function loadData(){
+  const uid = currentUser.id;
+
+  const [txRes, catRes, metasRes, cfgRes] = await Promise.all([
+    sb.from('transacoes').select('*').eq('user_id', uid),
+    sb.from('categorias_custom').select('*').eq('user_id', uid),
+    sb.from('metas').select('*').eq('user_id', uid).order('created_at', { ascending:true }),
+    sb.from('user_config').select('*').eq('user_id', uid).maybeSingle()
+  ]);
+
+  if(txRes.error) console.error('Erro ao carregar transações', txRes.error);
+  if(catRes.error) console.error('Erro ao carregar categorias', catRes.error);
+  if(metasRes.error) console.error('Erro ao carregar metas', metasRes.error);
+
+  transacoes = (txRes.data||[]).map(r=>({
+    id: r.id, date: r.date, type: r.type, categoria: r.categoria,
+    descricao: r.descricao||'', valor: Number(r.valor)
+  }));
+
+  categoriasCustom = { saida: [], entrada: [], investimento: [] };
+  (catRes.data||[]).forEach(r=>{ categoriasCustom[r.tipo].push(r.nome); });
+
+  metas = (metasRes.data||[]).map(r=>({
+    id: r.id, nome: r.nome, valorAlvo: Number(r.valor_alvo),
+    prazo: r.prazo || '', vinculo: r.vinculo || '', valorManual: Number(r.valor_manual||0)
+  }));
+
+  if(cfgRes.data){
+    config = { metaReserva: Number(cfgRes.data.meta_reserva||0) };
+  }else{
+    config = { metaReserva: 0 };
+    try{ await sb.from('user_config').insert({ user_id: uid, meta_reserva: 0 }); }catch(e){}
+  }
+}
+
+function flashSaved(){
+  const el = $('saveIndicator');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 1200);
+}
+
+// ==================== AUTENTICAÇÃO (Supabase Auth) ====================
+
+function traduzErroAuth(error){
+  const msg = (error && error.message) || '';
+  if(msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos.';
+  if(msg.includes('User already registered')) return 'Esse e-mail já está cadastrado. Faça login.';
+  if(msg.toLowerCase().includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if(msg.includes('Unable to validate email address')) return 'E-mail inválido.';
+  return msg || 'Ocorreu um erro. Tente novamente.';
+}
+
+function showAuthError(msg){
+  const el = $('authError');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideAuthError(){
+  $('authError').classList.remove('show');
+}
+
+$('tabLogin').addEventListener('click', ()=>{
+  $('tabLogin').classList.add('active'); $('tabSignup').classList.remove('active');
+  $('loginForm').classList.add('active'); $('signupForm').classList.remove('active');
+  hideAuthError();
+});
+$('tabSignup').addEventListener('click', ()=>{
+  $('tabSignup').classList.add('active'); $('tabLogin').classList.remove('active');
+  $('signupForm').classList.add('active'); $('loginForm').classList.remove('active');
+  hideAuthError();
+});
+
+async function doLogin(){
+  hideAuthError();
+  try{
+    const email = $('loginUser').value.trim();
+    const pass = $('loginPass').value;
+    if(!email || !pass){
+      showAuthError('Preencha e-mail e senha.');
+      return;
+    }
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if(error){ showAuthError(traduzErroAuth(error)); return; }
+    const nome = (data.user.user_metadata && data.user.user_metadata.nome) || data.user.email;
+    await enterApp(data.user, nome);
+  }catch(err){
+    console.error(err);
+    showAuthError('Erro ao entrar: ' + (err && err.message ? err.message : err));
+  }
+}
+
+async function doSignup(){
+  hideAuthError();
+  try{
+    const nome = $('signupNome').value.trim();
+    const email = $('signupUser').value.trim();
+    const pass = $('signupPass').value;
+    if(!nome || !email || pass.length<6){
+      showAuthError('Preencha nome, e-mail e uma senha com pelo menos 6 caracteres.');
+      return;
+    }
+    const { data, error } = await sb.auth.signUp({
+      email, password: pass, options: { data: { nome } }
+    });
+    if(error){ showAuthError(traduzErroAuth(error)); return; }
+    if(!data.session){
+      showAuthError('Conta criada! Verifique seu e-mail para confirmar antes de entrar.');
+      return;
+    }
+    await enterApp(data.user, nome);
+  }catch(err){
+    console.error(err);
+    showAuthError('Erro ao criar conta: ' + (err && err.message ? err.message : err));
+  }
+}
+
+$('loginSubmitBtn').addEventListener('click', doLogin);
+$('signupSubmitBtn').addEventListener('click', doSignup);
+
+// Enter para confirmar
+['loginUser','loginPass'].forEach(id=>{
+  $(id).addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); doLogin(); } });
+});
+['signupNome','signupUser','signupPass'].forEach(id=>{
+  $(id).addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); doSignup(); } });
+});
+
+
+async function enterApp(user, nome){
+  try{
+    currentUser = user;
+    $('userChipName').textContent = nome;
+    $('fData').value = new Date().toISOString().slice(0,10);
+    await loadData();
+    refreshCategoriaOptions();
+    renderAll();
+    $('authScreen').style.display = 'none';
+    $('appScreen').style.display = 'block';
+  }catch(err){
+    console.error(err);
+    currentUser = null;
+    showAuthError('Não foi possível abrir o app: ' + (err && err.message ? err.message : err));
+  }
+}
+
+$('logoutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  currentUser = null;
+  $('appScreen').style.display = 'none';
+  $('authScreen').style.display = 'flex';
+  ['loginUser','loginPass','signupNome','signupUser','signupPass'].forEach(id=>{ $(id).value=''; });
+  hideAuthError();
+});
+
+// ==================== TEMA CLARO/ESCURO ====================
+async function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  $('themeToggle').textContent = theme === 'light' ? '☀️' : '🌙';
+  try{ await window.storage.set('theme', theme, false); }catch(e){}
+}
+$('themeToggle').addEventListener('click', ()=>{
+  const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(current === 'light' ? 'dark' : 'light');
+});
+async function loadTheme(){
+  try{
+    const r = await window.storage.get('theme', false);
+    applyTheme(r && r.value === 'light' ? 'light' : 'dark');
+  }catch(e){ applyTheme('dark'); }
+}
+
+// ---- Tabs ----
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    btn.classList.add('active');
+    $('view-'+btn.dataset.view).classList.add('active');
+  });
+});
+
+// ---- Form categoria dinâmica ----
+function categoriasDoTipo(tipo){
+  return [...CATEGORIAS[tipo], ...(categoriasCustom[tipo]||[])];
+}
+function refreshCategoriaOptions(){
+  const tipo = $('fTipo').value;
+  const sel = $('fCategoria');
+  sel.innerHTML = categoriasDoTipo(tipo).map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+$('fTipo').addEventListener('change', refreshCategoriaOptions);
+
+// ---- Gerenciador de categorias ----
+$('toggleCatManager').addEventListener('click', ()=>{
+  const panel = $('catManagerPanel');
+  const show = panel.style.display === 'none';
+  panel.style.display = show ? 'block' : 'none';
+  $('toggleCatManager').textContent = show ? '– Ocultar categorias' : '+ Gerenciar categorias';
+  if(show) renderCatManager();
+});
+
+$('catSubmitBtn').addEventListener('click', async ()=>{
+  const tipo = $('catTipo').value;
+  const nome = $('catNome').value.trim();
+  if(!nome) return;
+  const jaExiste = categoriasDoTipo(tipo).some(c=>c.toLowerCase()===nome.toLowerCase());
+  if(jaExiste){ alert('Essa categoria já existe.'); return; }
+  const { error } = await sb.from('categorias_custom').insert({ user_id: currentUser.id, tipo, nome });
+  if(error){ console.error(error); alert('Erro ao salvar categoria: '+error.message); return; }
+  categoriasCustom[tipo].push(nome);
+  flashSaved();
+  $('catNome').value = '';
+  refreshCategoriaOptions();
+  renderCatManager();
+  renderMetaVinculoOptions();
+});
+
+async function deleteCategoria(tipo, nome){
+  const { error } = await sb.from('categorias_custom').delete()
+    .eq('user_id', currentUser.id).eq('tipo', tipo).eq('nome', nome);
+  if(error){ console.error(error); alert('Erro ao excluir categoria: '+error.message); return; }
+  categoriasCustom[tipo] = categoriasCustom[tipo].filter(c=>c!==nome);
+  flashSaved();
+  refreshCategoriaOptions();
+  renderCatManager();
+  renderMetaVinculoOptions();
+}
+
+function renderCatManager(){
+  const rows = [];
+  ['saida','entrada','investimento'].forEach(tipo=>{
+    (categoriasCustom[tipo]||[]).forEach(nome=>{
+      rows.push(`<div class="cat-manage-row">
+        <span>${nome}<span class="tipo-tag">${tipoLabel(tipo)}</span></span>
+        <button class="del-btn" onclick="deleteCategoria('${tipo}','${nome.replace(/'/g,"\\'")}')" title="Excluir">✕</button>
+      </div>`);
+    });
+  });
+  $('catCustomList').innerHTML = rows.length ? rows.join('') : '<div class="empty-cat">Nenhuma categoria personalizada ainda. Use o formulário acima para criar.</div>';
+}
+
+$('txSubmitBtn').addEventListener('click', async ()=>{
+  const novo = {
+    user_id: currentUser.id,
+    date: $('fData').value,
+    type: $('fTipo').value,
+    categoria: $('fCategoria').value,
+    descricao: $('fDescricao').value.trim(),
+    valor: parseFloat($('fValor').value)
+  };
+  if(!novo.date || !novo.valor || novo.valor<=0) return;
+  const { data, error } = await sb.from('transacoes').insert(novo).select().single();
+  if(error){ console.error(error); alert('Erro ao salvar lançamento: '+error.message); return; }
+  transacoes.push({ id:data.id, date:data.date, type:data.type, categoria:data.categoria, descricao:data.descricao||'', valor:Number(data.valor) });
+  flashSaved();
+  $('fDescricao').value = '';
+  $('fValor').value = '';
+  $('fData').value = new Date().toISOString().slice(0,10);
+  refreshCategoriaOptions();
+  renderAll();
+});
+
+async function deleteTx(id){
+  const { error } = await sb.from('transacoes').delete().eq('id', id);
+  if(error){ console.error(error); alert('Erro ao excluir: '+error.message); return; }
+  transacoes = transacoes.filter(t=>t.id!==id);
+  flashSaved();
+  renderAll();
+}
+
+// ---- Filtro de mês ----
+function getMonths(){
+  const set = new Set(transacoes.map(t=>monthKey(t.date)));
+  const now = new Date().toISOString().slice(0,7);
+  set.add(now);
+  return [...set].sort().reverse();
+}
+function monthLabel(mk){
+  const [y,m] = mk.split('-');
+  const names = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  return names[parseInt(m,10)-1] + "/" + y;
+}
+function populateMonthFilter(){
+  const months = getMonths();
+  const sel = $('filtroMes');
+  const current = sel.value || months[0];
+  sel.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  sel.value = months.includes(current) ? current : months[0];
+}
+$('filtroMes').addEventListener('change', renderLancamentos);
+
+// ---- Render: Painel ----
+function renderPainel(){
+  const currentMonth = new Date().toISOString().slice(0,7);
+  const mesTx = transacoes.filter(t=>monthKey(t.date)===currentMonth);
+
+  const entradas = mesTx.filter(t=>t.type==='entrada').reduce((s,t)=>s+t.valor,0);
+  const saidas = mesTx.filter(t=>t.type==='saida').reduce((s,t)=>s+t.valor,0);
+  const saldo = entradas - saidas;
+  const totalInvestido = transacoes.filter(t=>t.type==='investimento').reduce((s,t)=>s+t.valor,0);
+
+  $('cardEntradas').textContent = fmt(entradas);
+  $('cardSaidas').textContent = fmt(saidas);
+  $('cardSaldo').textContent = fmt(saldo);
+  $('cardSaldo').className = 'value mono ' + (saldo>=0?'pos':'neg');
+  $('cardInvestido').textContent = fmt(totalInvestido);
+  $('mesLabelCat').textContent = monthLabel(currentMonth);
+
+  // Categoria breakdown (saídas do mês)
+  const porCategoria = {};
+  mesTx.filter(t=>t.type==='saida').forEach(t=>{
+    porCategoria[t.categoria] = (porCategoria[t.categoria]||0) + t.valor;
+  });
+  const catEntries = Object.entries(porCategoria).sort((a,b)=>b[1]-a[1]);
+  const maxVal = catEntries.length ? catEntries[0][1] : 1;
+
+  const catList = $('catList');
+  if(catEntries.length===0){
+    catList.innerHTML = '<div class="empty">Nenhuma saída registrada este mês.</div>';
+  }else{
+    catList.innerHTML = catEntries.map(([cat,val])=>`
+      <div class="cat-row">
+        <div class="cat-name">${cat}</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%"></div></div>
+        <div class="cat-val">${fmt(val)}</div>
+      </div>
+    `).join('');
+  }
+
+  // Pie chart
+  const ctx = $('pieChart').getContext('2d');
+  if(pieChart) pieChart.destroy();
+  if(catEntries.length>0){
+    pieChart = new Chart(ctx, {
+      type:'doughnut',
+      data:{
+        labels: catEntries.map(e=>e[0]),
+        datasets:[{
+          data: catEntries.map(e=>e[1]),
+          backgroundColor: ['#C9A227','#8A6F1F','#4C9A6A','#3E7A55','#C1543C','#8B93A0','#5B6472','#E8E6DF','#6B5416','#2F3944'],
+          borderColor: '#12181F',
+          borderWidth: 2
+        }]
+      },
+      options:{
+        plugins:{ legend:{ labels:{ color:'#8B93A0', font:{family:'Inter', size:11} } } }
+      }
+    });
+  }
+
+  // Recent transactions (last 8)
+  const recent = [...transacoes].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  $('recentEmpty').style.display = recent.length ? 'none':'block';
+  $('recentBody').innerHTML = recent.map(t=>`
+    <tr>
+      <td>${formatDate(t.date)}</td>
+      <td><span class="tag ${t.type}">${tipoLabel(t.type)}</span></td>
+      <td>${t.categoria}</td>
+      <td class="desc">${t.descricao||'—'}</td>
+      <td style="text-align:right">${fmt(t.valor)}</td>
+    </tr>
+  `).join('');
+}
+
+function tipoLabel(t){
+  return t==='entrada' ? 'Entrada' : t==='saida' ? 'Saída' : 'Investimento';
+}
+function formatDate(d){
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ---- Render: Lançamentos ----
+function renderLancamentos(){
+  populateMonthFilter();
+  const mk = $('filtroMes').value;
+  const list = transacoes.filter(t=>monthKey(t.date)===mk).sort((a,b)=>b.date.localeCompare(a.date));
+  $('allEmpty').style.display = list.length ? 'none':'block';
+  $('allBody').innerHTML = list.map(t=>`
+    <tr>
+      <td>${formatDate(t.date)}</td>
+      <td><span class="tag ${t.type}">${tipoLabel(t.type)}</span></td>
+      <td>${t.categoria}</td>
+      <td class="desc">${t.descricao||'—'}</td>
+      <td style="text-align:right">${fmt(t.valor)}</td>
+      <td><button class="del-btn" onclick="deleteTx('${t.id}')" title="Excluir">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ---- Render: Investimentos ----
+function renderInvestimentos(){
+  const invs = transacoes.filter(t=>t.type==='investimento').sort((a,b)=>a.date.localeCompare(b.date));
+
+  // Line chart cumulative
+  let cum = 0;
+  const points = invs.map(t=>{ cum += t.valor; return {x:t.date, y:cum}; });
+  const ctx = $('lineChart').getContext('2d');
+  if(lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: points.map(p=>formatDate(p.x)),
+      datasets:[{
+        label:'Acumulado',
+        data: points.map(p=>p.y),
+        borderColor:'#C9A227',
+        backgroundColor:'rgba(201,162,39,0.12)',
+        fill:true,
+        tension:0.25,
+        pointBackgroundColor:'#C9A227',
+        pointRadius:3
+      }]
+    },
+    options:{
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:'#8B93A0', font:{size:10} }, grid:{ color:'#232C36' } },
+        y:{ ticks:{ color:'#8B93A0', font:{size:10} }, grid:{ color:'#232C36' } }
+      }
+    }
+  });
+
+  // Category list for investments
+  const porCategoria = {};
+  invs.forEach(t=>{ porCategoria[t.categoria] = (porCategoria[t.categoria]||0) + t.valor; });
+  const entries = Object.entries(porCategoria).sort((a,b)=>b[1]-a[1]);
+  const maxVal = entries.length ? entries[0][1] : 1;
+  $('invCatList').innerHTML = entries.length ? entries.map(([cat,val])=>`
+    <div class="cat-row">
+      <div class="cat-name">${cat}</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(val/maxVal*100).toFixed(0)}%"></div></div>
+      <div class="cat-val">${fmt(val)}</div>
+    </div>
+  `).join('') : '<div class="empty">Nenhum investimento lançado ainda.</div>';
+
+  $('invEmpty').style.display = invs.length ? 'none':'block';
+  $('invBody').innerHTML = [...invs].reverse().map(t=>`
+    <tr>
+      <td>${formatDate(t.date)}</td>
+      <td>${t.categoria}</td>
+      <td class="desc">${t.descricao||'—'}</td>
+      <td style="text-align:right">${fmt(t.valor)}</td>
+      <td><button class="del-btn" onclick="deleteTx('${t.id}')" title="Excluir">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ---- Metas ----
+function renderMetaVinculoOptions(){
+  const sel = $('mVinculo');
+  const current = sel.value;
+  const invCats = categoriasDoTipo('investimento');
+  sel.innerHTML = '<option value="">Controle manual</option>' +
+    invCats.map(c=>`<option value="${c}">Investimentos — ${c}</option>`).join('');
+  if([...sel.options].some(o=>o.value===current)) sel.value = current;
+}
+
+$('metaSubmitBtn').addEventListener('click', async ()=>{
+  const nome = $('mNome').value.trim();
+  const valorAlvo = parseFloat($('mValorAlvo').value);
+  if(!nome || !valorAlvo || valorAlvo<=0) return;
+  const novo = {
+    user_id: currentUser.id,
+    nome,
+    valor_alvo: valorAlvo,
+    prazo: $('mPrazo').value || null,
+    vinculo: $('mVinculo').value || '',
+    valor_manual: 0
+  };
+  const { data, error } = await sb.from('metas').insert(novo).select().single();
+  if(error){ console.error(error); alert('Erro ao criar meta: '+error.message); return; }
+  metas.push({ id:data.id, nome:data.nome, valorAlvo:Number(data.valor_alvo), prazo:data.prazo||'', vinculo:data.vinculo||'', valorManual:Number(data.valor_manual||0) });
+  flashSaved();
+  $('mNome').value = '';
+  $('mValorAlvo').value = '';
+  $('mPrazo').value = '';
+  renderMetas();
+});
+
+async function deleteMeta(id){
+  const { error } = await sb.from('metas').delete().eq('id', id);
+  if(error){ console.error(error); alert('Erro ao excluir meta: '+error.message); return; }
+  metas = metas.filter(m=>m.id!==id);
+  flashSaved();
+  renderMetas();
+}
+
+async function atualizarValorManual(id){
+  const input = document.getElementById('manual-'+id);
+  const val = parseFloat(input.value);
+  if(isNaN(val) || val<0) return;
+  const meta = metas.find(m=>m.id===id);
+  if(!meta) return;
+  const { error } = await sb.from('metas').update({ valor_manual: val }).eq('id', id);
+  if(error){ console.error(error); alert('Erro ao atualizar: '+error.message); return; }
+  meta.valorManual = val;
+  flashSaved();
+  renderMetas();
+}
+
+function valorAtualDaMeta(meta){
+  if(meta.vinculo){
+    return transacoes.filter(t=>t.type==='investimento' && t.categoria===meta.vinculo).reduce((s,t)=>s+t.valor,0);
+  }
+  return meta.valorManual || 0;
+}
+
+function prazoInfo(prazo){
+  if(!prazo) return '';
+  const hoje = new Date();
+  const alvo = new Date(prazo+'T00:00:00');
+  const dias = Math.ceil((alvo-hoje)/(1000*60*60*24));
+  if(dias<0) return `prazo vencido (${formatDate(prazo)})`;
+  if(dias===0) return `prazo é hoje`;
+  return `${dias} dias restantes · ${formatDate(prazo)}`;
+}
+
+function renderMetas(){
+  renderMetaVinculoOptions();
+  if(metas.length===0){
+    $('metasList').innerHTML = '<div class="panel"><div class="empty">Nenhuma meta criada ainda. Use o formulário acima — pode ser reserva de emergência, uma viagem, abrir CNPJ, o que fizer sentido pra você.</div></div>';
+    return;
+  }
+  $('metasList').innerHTML = metas.map(meta=>{
+    const atual = valorAtualDaMeta(meta);
+    const pct = meta.valorAlvo>0 ? Math.min(100, atual/meta.valorAlvo*100) : 0;
+    const prazoTxt = prazoInfo(meta.prazo);
+    const manualBlock = meta.vinculo ? '' : `
+      <div class="manual-update">
+        <input type="number" id="manual-${meta.id}" step="0.01" min="0" placeholder="Novo valor atual" value="${meta.valorManual||0}">
+        <button class="btn btn-ghost" style="font-size:12px; padding:8px 12px;" onclick="atualizarValorManual('${meta.id}')">Atualizar valor</button>
+      </div>`;
+    return `
+      <div class="meta-card">
+        <div class="meta-top">
+          <div>
+            <div class="meta-name">${meta.nome}</div>
+            <div class="meta-meta">${meta.vinculo ? 'Vinculada a: ' + meta.vinculo : 'Controle manual'}${prazoTxt ? ' · '+prazoTxt : ''}</div>
+          </div>
+          <div class="meta-actions">
+            <span class="meta-badge">${pct.toFixed(0)}%</span>
+            <button class="del-btn" onclick="deleteMeta('${meta.id}')" title="Excluir meta">✕</button>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct.toFixed(1)}%;"></div></div>
+          <div class="progress-label">
+            <span>${fmt(atual)}</span>
+            <span>Meta: ${fmt(meta.valorAlvo)}</span>
+          </div>
+        </div>
+        ${manualBlock}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- Ticker ----
+function renderTicker(){
+  const currentMonth = new Date().toISOString().slice(0,7);
+  const mesTx = transacoes.filter(t=>monthKey(t.date)===currentMonth);
+  const entradas = mesTx.filter(t=>t.type==='entrada').reduce((s,t)=>s+t.valor,0);
+  const saidas = mesTx.filter(t=>t.type==='saida').reduce((s,t)=>s+t.valor,0);
+  const investido = transacoes.filter(t=>t.type==='investimento').reduce((s,t)=>s+t.valor,0);
+  const saldo = entradas - saidas;
+  const txt = `<span>ENTRADAS DO MÊS <b>${fmt(entradas)}</b></span><span>SAÍDAS DO MÊS <b>${fmt(saidas)}</b></span><span>SALDO <b>${fmt(saldo)}</b></span><span>TOTAL INVESTIDO <b>${fmt(investido)}</b></span><span>META DE RESERVA <b>${fmt(config.metaReserva)}</b></span>`;
+  $('tickerText').innerHTML = txt + txt;
+}
+
+function renderAll(){
+  renderPainel();
+  renderLancamentos();
+  renderInvestimentos();
+  renderMetas();
+  renderTicker();
+}
+
+async function init(){
+  await loadTheme();
+
+  const { data: { session } } = await sb.auth.getSession();
+  if(session){
+    const nome = (session.user.user_metadata && session.user.user_metadata.nome) || session.user.email;
+    await enterApp(session.user, nome);
+    return;
+  }
+  // Sem sessão válida: mostra tela de login
+  $('authScreen').style.display = 'flex';
+  $('appScreen').style.display = 'none';
+}
+init();
+
+// Mantém a UI sincronizada se a sessão expirar/for encerrada em outra aba
+sb.auth.onAuthStateChange((event)=>{
+  if(event === 'SIGNED_OUT'){
+    currentUser = null;
+    $('appScreen').style.display = 'none';
+    $('authScreen').style.display = 'flex';
+  }
+});
+</script>
+</body>
+</html>
